@@ -1,7 +1,8 @@
 from functools import lru_cache
+from typing import Annotated
 
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -14,7 +15,9 @@ class Settings(BaseSettings):
     admin_secret: str = "development-only-admin-secret"
     frontend_url: str = "http://localhost:5173"
     backend_url: str = "http://localhost:8000"
-    allowed_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
+    allowed_origins: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: ["http://localhost:5173"]
+    )
     session_signing_secret: str = "development-only-signing-secret-change-me"
     environment: str = "development"
     log_level: str = "INFO"
