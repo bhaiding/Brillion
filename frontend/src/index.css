@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { font-family: 'DM Sans', system-ui, sans-serif; color: #141128; background: #fff9ee; font-synthesis: none; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; }
+button, input, select { font: inherit; }
+button { -webkit-tap-highlight-color: transparent; }
+.noise { background-image: radial-gradient(rgba(20,17,40,.12) .8px, transparent .8px); background-size: 12px 12px; }
+.btn { @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border-2 border-ink px-5 py-3 font-bold transition-all hover:-translate-y-0.5 active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-40; }
+.btn-primary { @apply btn bg-electric text-white shadow-[4px_4px_0_#141128]; }
+.btn-secondary { @apply btn bg-white shadow-[4px_4px_0_#141128]; }
+.card { @apply rounded-[2rem] border-2 border-ink bg-white p-6 shadow-chunky; }
+.field { @apply min-h-12 w-full rounded-2xl border-2 border-ink bg-white px-4 py-3 text-lg outline-none transition-shadow focus:shadow-[0_0_0_4px_#7ce7c2]; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
+

@@ -1,0 +1,115 @@
+services:
+  - type: web
+    name: brillion-api
+    runtime: python
+    region: ohio
+    plan: 0.5c-512mb
+    rootDir: backend
+    buildCommand: pip install .
+    preDeployCommand: alembic upgrade head
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers
+    initialDeployHook: python -m app.seed_data
+    healthCheckPath: /ready
+    maxShutdownDelaySeconds: 60
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: brillion-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: brillion-key-value
+          type: keyvalue
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-5-mini
+      - key: ADMIN_SECRET
+        generateValue: true
+      - key: SESSION_SIGNING_SECRET
+        generateValue: true
+      - key: ENVIRONMENT
+        value: production
+      - key: ALLOWED_ORIGINS
+        value: https://brillion.onrender.com
+      - key: FRONTEND_URL
+        value: https://brillion.onrender.com
+      - key: BACKEND_URL
+        value: https://brillion-api.onrender.com
+      - key: SENTRY_DSN
+        sync: false
+
+  - type: worker
+    name: brillion-question-worker
+    runtime: python
+    region: ohio
+    plan: 0.5c-512mb
+    rootDir: backend
+    buildCommand: pip install .
+    startCommand: python -m app.worker
+    maxShutdownDelaySeconds: 60
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: brillion-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: brillion-key-value
+          type: keyvalue
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-5-mini
+      - key: SESSION_SIGNING_SECRET
+        generateValue: true
+      - key: ADMIN_SECRET
+        generateValue: true
+      - key: ENVIRONMENT
+        value: production
+
+  - type: web
+    name: brillion
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && VITE_API_URL=https://$API_HOST npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: API_HOST
+        fromService:
+          name: brillion-api
+          type: web
+          envVarKey: RENDER_EXTERNAL_HOSTNAME
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(), microphone=(), geolocation=()
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  - type: keyvalue
+    name: brillion-key-value
+    region: ohio
+    plan: 256mb
+    ipAllowList: []
+    maxmemoryPolicy: noeviction
+    persistenceMode: journal-snapshot
+
+databases:
+  - name: brillion-postgres
+    region: ohio
+    plan: 0.1c-256mb
+    databaseName: brillion
+    user: brillion
+    postgresMajorVersion: "17"
+    ipAllowList: []

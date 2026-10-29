@@ -1,0 +1,1044 @@
+# BRILLION — Full-Stack Multiplayer Trivia Website
+
+## 1. Project Objective
+
+Build and deploy a complete, production-ready multiplayer trivia website called **Brillion**, inspired by the gameplay concept of Krillion (krillion.io).
+
+Brillion is a party game in which friends join the same room using their phones, answer seven open-ended trivia questions simultaneously, and compete to provide the rarest valid answers.
+
+One player hosts the game from a computer or other device connected to a television. The main screen displays the question, countdown, player statuses, synchronized answer reveals, points, and standings.
+
+The finished product must be accessible publicly on Render.
+
+**This is a complete application, not a prototype, mockup, or proof of concept.**
+
+Implement the system thoroughly. Do not substitute hardcoded answers, simulated multiplayer, placeholder buttons, fake scoring, or temporary in-memory data for the functionality described below.
+
+Use the actual GitHub repository, Render deployment configuration, database, API, and real-time infrastructure.
+
+If access credentials or external configuration are needed, request them from me rather than disabling the corresponding feature.
+
+---
+
+## 2. Core Game Rules
+
+Each game consists of exactly seven questions.
+
+Each question:
+
+- Presents an open-ended trivia category.
+- Allows each player to submit one valid answer.
+- Gives players 25 seconds to answer.
+- Rewards rarer valid answers with more points.
+- Awards zero points for invalid or missing answers.
+- Reveals all players' answers after the timer expires.
+- Updates the leaderboard after each round.
+
+Example questions:
+
+- Name a country in Africa.
+- Name a Shakespeare play.
+- Name a chemical element.
+- Name a film directed by Christopher Nolan.
+- Name a US president.
+- Name an animal native to Australia.
+- Name a Nobel Prize in Physics recipient.
+
+Questions must be unambiguous, objectively answerable, and supported by a validated answer database.
+
+### Scoring
+
+Implement the following scoring tiers:
+
+| Tier | Points |
+|---|---:|
+| Common | 10 |
+| Predictably Obscure | 15 |
+| Uncommon | 30 |
+| Rare | 60 |
+| Deep Cut | 85 |
+| Brillion | 100 |
+
+The maximum possible game score is 700 points.
+
+A valid answer's point value is predetermined from its rarity classification, not dynamically determined by which players choose it during the current match.
+
+Two players submitting the same answer receive identical points.
+
+Answer speed does not affect scoring.
+
+Each question can have one designated 100-point answer. It should be genuinely interesting and reasonably discoverable, rather than an arbitrary practically unknowable answer.
+
+### Answer Submission
+
+Players can edit their input until they submit or time expires.
+
+Allow submission with Enter or a button.
+
+Once submitted, an answer is locked unless the game explicitly permits correcting a rejected entry before the deadline.
+
+The server must enforce submission deadlines and prevent submitting multiple scored answers per question.
+
+Invalid entries should receive useful feedback while time remains so players can retry, but this must not reveal rarity scores or other accepted answers prematurely.
+
+All answer evaluation is authoritative on the server.
+
+---
+
+## 3. User Experience
+
+### A. Homepage
+
+Create an attractive, professional homepage with:
+
+- Brillion branding and logo.
+- A clear explanation of the game.
+- A prominent "Create Game" button.
+- A "Join Game" button.
+- Room-code entry.
+- A short explanation of rarity scoring.
+- Responsive design for desktop and mobile.
+
+The visual style should be distinctive, modern, playful, and polished.
+
+Do not copy Krillion's artwork, mascot, branding, or page design.
+
+### B. Creating a Game
+
+When a host creates a game:
+
+1. Generate a secure, short, human-readable room code.
+2. Create a persistent room record.
+3. Show the room code prominently.
+4. Generate a QR code linking directly to the room.
+5. Show joined players in real time.
+6. Allow the host to start once at least one player has joined.
+7. Allow the host to remove players before starting.
+8. Allow the host to change room settings.
+
+Room settings should include:
+
+- Number of questions, default seven (standard games always use seven).
+- Answer timer, default 25 seconds.
+- Question categories: mixed or selected categories.
+- Family-friendly content filtering.
+- Option to hide the leaderboard until the end.
+- Option to enable or disable host-controlled transitions.
+
+Default game mode must follow the standard seven-question rules.
+
+### C. Joining a Game
+
+Players join using either:
+
+- A room code.
+- A QR code.
+- A direct invitation URL.
+
+Players enter a nickname.
+
+No account should be required.
+
+Each player receives a private, secure session token allowing them to reconnect without losing their identity.
+
+Reject duplicate nicknames within the same room.
+
+Players should be able to join from iOS, Android, or desktop browsers.
+
+### D. Main TV Screen
+
+Create a dedicated `/room/:code/display` experience.
+
+This interface is optimized for a computer or tablet connected to a large television.
+
+The TV interface should show:
+
+**Lobby**
+
+- Room code.
+- QR code.
+- Player names.
+- Connection statuses.
+- Start button for the authorized host.
+
+**During questions**
+
+- Current question.
+- Question number out of seven.
+- Large synchronized countdown.
+- Number of players who have submitted.
+- Player names with submitted/pending indicators.
+- No answers revealed before the deadline.
+
+**After each question**
+
+Show every player's:
+
+- Name.
+- Submitted answer.
+- Validity.
+- Answer rarity tier.
+- Points earned this round.
+- Overall cumulative score.
+
+Include animated answer reveals.
+
+Display a leaderboard ranked by total points.
+
+Support ties correctly.
+
+The host can advance to the next question. Provide an optional automatic transition countdown.
+
+**At the end of the game**
+
+Display:
+
+- Winner.
+- Final leaderboard.
+- Each player's total score.
+- Each player's seven answers.
+- Points awarded for each answer.
+- Highest-scoring response in the game.
+- Notable 100-point answers.
+- Replay/rematch option.
+
+### E. Individual Player Screen
+
+Create a mobile-first interface at `/room/:code/play`.
+
+Each player sees:
+
+- The current question.
+- Countdown timer.
+- Answer input.
+- Submit button.
+- Submission confirmation.
+- Their result once the round is revealed.
+- Their cumulative score.
+- Current leaderboard after each reveal.
+
+The player's interface must remain synchronized with the TV display.
+
+Players must never see another player's unrevealed answer.
+
+On mobile, the keyboard must not cover the input or countdown.
+
+---
+
+## 4. Multiplayer Synchronization
+
+Use server-authoritative real-time game state.
+
+Implement WebSockets with FastAPI.
+
+Use Redis-compatible storage for shared ephemeral state, distributed synchronization, and event broadcasting.
+
+Use PostgreSQL to persist rooms, players, rounds, and submissions that must survive server restarts.
+
+The architecture must support multiple backend instances without depending on process-local room dictionaries.
+
+### Game State Machine
+
+Implement explicit states:
+
+1. `LOBBY`
+2. `QUESTION_PREVIEW`
+3. `ANSWERING`
+4. `SCORING`
+5. `REVEAL`
+6. `LEADERBOARD`
+7. `FINISHED`
+
+Each state transition must be validated.
+
+The server maintains the canonical state and timestamps.
+
+Clients receive authoritative deadlines and calculate their local countdown displays from synchronized server time.
+
+Do not implement separate independent timers on each client.
+
+Use atomic state transitions, idempotent event handlers, and database constraints to prevent duplicate submissions or repeated scoring.
+
+### Connection Handling
+
+Implement:
+
+- Automatic reconnection with exponential backoff.
+- WebSocket ping/pong keepalive.
+- Full state resynchronization on reconnect.
+- Player session recovery.
+- Graceful handling of temporarily disconnected players.
+- Host reconnection.
+- Host transfer or another explicit recovery mechanism if the host leaves.
+- Duplicate-tab handling.
+- Room expiration and cleanup.
+- Server restart recovery.
+
+A player disconnecting must not stop the game for everyone else.
+
+A player reconnecting must not be allowed to submit after the server-enforced deadline.
+
+### Security
+
+Require appropriate authorization for every host-only action.
+
+A room code alone must not grant administrative privileges.
+
+Use unguessable session tokens, secure storage practices, rate limiting, input validation, and appropriate origin controls.
+
+Do not expose raw WebSocket event handlers that allow clients to alter scores, timers, other players' answers, or game states.
+
+---
+
+## 5. Question and Answer Database
+
+This is one of the most important components.
+
+Implement a permanent, expandable question bank in PostgreSQL.
+
+Each question must have:
+
+- Unique ID.
+- Question text.
+- Category.
+- Difficulty metadata.
+- Eligibility criteria.
+- Source references.
+- Accepted answer set.
+- Answer aliases.
+- Rarity scores.
+- Generation metadata.
+- Validation status.
+- Review status.
+- Version information.
+
+Each answer must have:
+
+- Canonical name.
+- Accepted aliases.
+- Rarity tier.
+- Points.
+- Popularity/familiarity evidence.
+- Source metadata.
+- Validation status.
+- Optional interesting fact or explanation.
+
+Example:
+
+```json
+{
+  "question": "Name a country in Africa",
+  "category": "Geography",
+  "answers": [
+    {
+      "canonical": "Egypt",
+      "aliases": ["Arab Republic of Egypt"],
+      "points": 10,
+      "tier": "common"
+    },
+    {
+      "canonical": "Botswana",
+      "aliases": ["Republic of Botswana"],
+      "points": 60,
+      "tier": "rare"
+    }
+  ]
+}
+```
+
+These point values are examples, not required scores.
+
+Store normalized answers and aliases efficiently. Add appropriate database indexes.
+
+Use a versioned, immutable published answer bank for each game so that scores remain reproducible if question data is later edited.
+
+---
+
+## 6. Automated Question Generation System
+
+Build an actual question-generation and answer-curation pipeline.
+
+Use the OpenAI API for tasks where language-model assistance adds value.
+
+However, do not rely on the LLM alone to invent exhaustive answer sets or determine factual correctness.
+
+The pipeline should:
+
+1. Generate potential trivia question ideas.
+2. Assess whether each question is suitable for Brillion.
+3. Identify authoritative datasets or sources.
+4. Collect valid answers.
+5. Normalize names.
+6. Generate and validate aliases.
+7. Detect duplicates.
+8. Verify eligibility against the question's rules.
+9. Estimate familiarity and rarity.
+10. Assign scoring tiers.
+11. Select an interesting 100-point answer.
+12. Run automated quality checks.
+13. Flag questionable items for review.
+14. Publish approved questions to the game database.
+
+### Dataset Integration
+
+Support importing answers from structured and reputable datasets where appropriate.
+
+Possible sources include:
+
+- Wikidata.
+- Wikipedia-derived datasets.
+- Public geographic databases.
+- Open movie metadata datasets.
+- Open scientific and historical databases.
+- Other legally reusable sources.
+
+Use source-specific importers.
+
+Track source attribution, licensing, and retrieval dates.
+
+Do not scrape websites indiscriminately or assume every source permits commercial reuse.
+
+Create a modular architecture so additional data sources can be added later.
+
+### OpenAI Integration
+
+Use the official OpenAI API from the backend.
+
+The API key must be stored securely in environment variables.
+
+Never expose the key to browser JavaScript.
+
+Use structured, schema-validated model outputs.
+
+Implement:
+
+- Retry logic.
+- Exponential backoff.
+- Rate-limit handling.
+- Token usage tracking.
+- Cost tracking.
+- Batch processing where appropriate.
+- Configurable generation limits.
+- Validation and rejection of malformed outputs.
+
+The system must not require an OpenAI call every time a player answers.
+
+OpenAI should principally be used for offline question generation, candidate evaluation, semantic review, and exceptional adjudication.
+
+---
+
+## 7. Proper Rarity Scoring
+
+Implement a defensible, reproducible rarity estimation system.
+
+Do not simply ask an LLM to assign arbitrary points and accept those values without calibration.
+
+### Scoring Methodology
+
+Use the strongest available evidence for each question type.
+
+Potential signals include:
+
+- Frequency of mentions in a text corpus.
+- Entity familiarity.
+- Public popularity metrics.
+- Search or pageview statistics, when appropriately licensed and available.
+- Dataset-specific popularity measures.
+- LLM estimates of recognition likelihood.
+- Human-reviewed calibration examples.
+
+Normalize signals separately for different question types.
+
+For instance, movie popularity cannot be measured on exactly the same scale as familiarity with chemical elements.
+
+### Calibration
+
+Develop a rarity calibration process using reviewed reference answers.
+
+Store:
+
+- Raw evidence.
+- Familiarity estimate.
+- Scoring model version.
+- Assigned tier.
+- Review status.
+
+Do not assume that dividing the answer database into six equal-sized groups creates a fair rarity system.
+
+The game should measure how likely a typical player is to think of an answer, not merely how rare the underlying object is.
+
+### 100-Point Answers
+
+Select exceptional answers based on:
+
+- Validity.
+- Obscurity.
+- Interestingness.
+- Discoverability.
+- Suitability for the category.
+
+Include a short explanation of why the answer is interesting when possible.
+
+### Quality Requirements
+
+The scoring system must be:
+
+- Consistent.
+- Deterministic after publication.
+- Explainable.
+- Auditable.
+- Versioned.
+- Testable.
+
+Create evaluation fixtures with expected relative rarity orderings.
+
+Flag surprising rankings for review.
+
+---
+
+## 8. Answer Validation and Spelling Correction
+
+Build robust answer validation.
+
+Support:
+
+- Case insensitivity.
+- Leading/trailing whitespace.
+- Unicode normalization.
+- Common punctuation variations.
+- Diacritics.
+- Known aliases.
+- Common abbreviations.
+- Minor spelling mistakes.
+- Alternate official names.
+
+Use conservative fuzzy matching.
+
+Avoid automatically mapping an ambiguous guess to an unrelated valid answer.
+
+### Unknown Answer Handling
+
+If a submitted answer is not recognized:
+
+1. Check exact normalized matches.
+2. Check aliases.
+3. Check conservative fuzzy matches.
+4. Check any curated fallback rules.
+5. Return an unrecognized result if still unmatched.
+
+Allow players to retry before the timer expires.
+
+For genuinely disputed answers, implement a host-visible review process after the round.
+
+Optionally integrate an asynchronous LLM-assisted adjudication system.
+
+Do not make a live LLM response necessary for the round timer to finish.
+
+Do not award arbitrary or non-reproducible scores to unrecognized answers.
+
+If an answer is accepted following review, assign a documented score, record the ruling, and update the relevant game results atomically.
+
+Preserve an audit trail.
+
+Recalculate affected leaderboards automatically.
+
+---
+
+## 9. Question Bank Management
+
+Build a protected administrator interface.
+
+The administrator should be able to:
+
+- View all questions.
+- Search and filter questions.
+- Generate new candidate questions.
+- Import datasets.
+- Inspect accepted answers.
+- Inspect rarity scores.
+- Edit incorrect classifications.
+- Add missing answers.
+- Add aliases.
+- Review AI-generated content.
+- Approve or reject questions.
+- Publish question packs.
+- View generation costs.
+- View question quality metrics.
+- Identify frequently rejected answers.
+- Inspect answer disputes.
+
+Administrative functionality must require authentication.
+
+Do not make administrator endpoints publicly writable.
+
+### Question Bank Size
+
+Build the system for thousands of questions and large answer sets.
+
+Initially populate at least 100 fully validated, playable questions spanning multiple categories.
+
+Prioritize quality over quantity.
+
+Do not inflate question counts with near-duplicates, fictional content, incomplete answer sets, or low-quality LLM-generated lists.
+
+If 100 genuinely validated questions cannot be produced immediately, report the exact limitation and keep unvalidated questions unpublished.
+
+Players must never receive an empty or partially populated question.
+
+---
+
+## 10. Question Selection
+
+When a host starts a game, the backend should select seven eligible questions.
+
+Selection should:
+
+- Respect selected categories.
+- Avoid duplicate questions.
+- Avoid near-identical questions in one game.
+- Balance subject matter.
+- Prefer sufficiently complete, reviewed answer banks.
+- Avoid obvious repetition across rematches.
+- Preserve the selected question set for the entire game.
+
+Do not generate questions synchronously during game startup.
+
+The question bank should already contain playable content.
+
+Use a reproducible selection process and record the selected question IDs.
+
+If insufficient validated questions exist, show a clear error rather than silently using bad questions.
+
+---
+
+## 11. Database Design
+
+Use PostgreSQL and SQLAlchemy with Alembic migrations.
+
+Design normalized tables for at least:
+
+- `questions`
+- `question_versions`
+- `answers`
+- `answer_aliases`
+- `answer_sources`
+- `rarity_evaluations`
+- `question_generation_jobs`
+- `question_reviews`
+- `rooms`
+- `room_players`
+- `game_sessions`
+- `game_rounds`
+- `player_submissions`
+- `scoring_events`
+- `answer_disputes`
+- `admin_users`
+
+Use appropriate:
+
+- Foreign keys.
+- Unique constraints.
+- Indexes.
+- Transactions.
+- Integrity checks.
+- Creation and modification timestamps.
+
+Never rely solely on Redis for permanent game data.
+
+Use Redis for transient state, coordination, pub/sub, and caching.
+
+Persist canonical game results in PostgreSQL.
+
+---
+
+## 12. Backend API
+
+Implement documented REST endpoints and WebSocket events.
+
+At minimum, support:
+
+### Rooms
+
+- Create room.
+- Join room.
+- Get room state.
+- Leave room.
+- Start game.
+- Close room.
+- Reconnect player.
+
+### Gameplay
+
+- Fetch authorized game state.
+- Submit answer.
+- Receive answer-validation feedback.
+- Receive synchronized timer/state updates.
+- Reveal round results.
+- Advance round.
+- Retrieve leaderboard.
+- Retrieve final results.
+- Create rematch.
+
+### Administration
+
+- Generate questions.
+- Import datasets.
+- Validate candidate answers.
+- Evaluate rarity.
+- Review questions.
+- Publish questions.
+- Inspect generation jobs.
+- Review disputed answers.
+
+Use typed request and response schemas.
+
+Generate OpenAPI documentation.
+
+Ensure API error messages are descriptive but do not leak sensitive information or unrevealed answers.
+
+---
+
+## 13. Frontend Requirements
+
+Use React, TypeScript, Vite, and Tailwind CSS.
+
+Build reusable components for:
+
+- Navigation.
+- Game creation.
+- Lobby.
+- QR code.
+- Player list.
+- Countdown timer.
+- Question display.
+- Answer input.
+- Submission status.
+- Answer reveal.
+- Rarity badges.
+- Leaderboard.
+- Final results.
+- Reconnection notices.
+- Administrative dashboard.
+
+Design separate layouts for:
+
+- Mobile players.
+- Desktop hosts.
+- Full-screen television displays.
+
+Include:
+
+- Responsive typography.
+- Smooth animations.
+- Accessible color contrast.
+- Keyboard support.
+- Clear loading and error states.
+- Reduced-motion support.
+- Sound effects with a mute control.
+- Consistent branding.
+- Polished transitions.
+
+The game must be usable on Safari, Chrome, and common mobile browsers.
+
+Do not sacrifice reliability for animations.
+
+---
+
+## 14. Testing Requirements
+
+Build a thorough automated testing suite.
+
+### Backend Unit Tests
+
+Test:
+
+- Answer normalization.
+- Alias matching.
+- Fuzzy matching.
+- Rarity lookup.
+- Score aggregation.
+- Tie handling.
+- Deadline enforcement.
+- Question selection.
+- Game state transitions.
+- Permission checks.
+- Session recovery.
+
+### Integration Tests
+
+Test:
+
+- Room creation.
+- Multiple players joining.
+- Starting a game.
+- Concurrent answer submissions.
+- Timer expiration.
+- Answer scoring.
+- State synchronization.
+- Round transitions.
+- Rematches.
+- Reconnection.
+- Database persistence.
+- Redis pub/sub behavior.
+
+### End-to-End Browser Tests
+
+Use Playwright to simulate multiple players and a host.
+
+Include a complete seven-round test:
+
+1. Host creates a room.
+2. Three or more simulated players join.
+3. Host starts the game.
+4. All players receive identical questions.
+5. Players submit different answers.
+6. The timer expires.
+7. Correct answers and points are revealed.
+8. Standings update correctly.
+9. All seven rounds complete.
+10. The winner is correctly identified.
+11. The host starts a rematch.
+
+Test late submissions, invalid answers, simultaneous submissions, refreshes, and temporary disconnections.
+
+Also test concurrency across multiple backend instances.
+
+### Scoring Evaluation
+
+Create a dataset of representative questions with manually reviewed expected rankings.
+
+Measure:
+
+- Valid-answer acceptance.
+- Invalid-answer rejection.
+- Alias recognition.
+- Incorrect fuzzy matches.
+- Rarity-ranking consistency.
+- Missing-answer rates.
+- Dispute frequency.
+
+Report metrics honestly.
+
+Do not claim perfect correctness without evidence.
+
+---
+
+## 15. Production Deployment on Render
+
+Deploy the complete project to Render.
+
+Create a `render.yaml` infrastructure configuration.
+
+Provision appropriate services:
+
+1. Static frontend.
+2. FastAPI backend web service.
+3. Managed PostgreSQL database.
+4. Redis-compatible Render Key Value instance.
+5. Background worker for question generation.
+6. Optional scheduled job for automated question-bank generation and maintenance.
+
+Ensure all services are configured to communicate securely.
+
+### Environment Variables
+
+Support at least:
+
+```env
+DATABASE_URL=
+REDIS_URL=
+OPENAI_API_KEY=
+OPENAI_MODEL=
+ADMIN_SECRET=
+FRONTEND_URL=
+BACKEND_URL=
+ALLOWED_ORIGINS=
+SESSION_SIGNING_SECRET=
+```
+
+Use appropriate secret generation and credential handling.
+
+Never commit real secrets to Git.
+
+Create `.env.example` containing placeholders only.
+
+Configure Render secrets directly through the dashboard or a secure integration.
+
+### Deployment Requirements
+
+- Public HTTPS frontend.
+- Secure WebSocket connections using WSS.
+- Correct CORS and origin configuration.
+- Health-check endpoint.
+- Automatic database migrations.
+- Structured application logging.
+- Error tracking.
+- Service monitoring.
+- Appropriate startup and shutdown behavior.
+- Reconnection during deployments.
+- Proper handling of PostgreSQL and Redis unavailability.
+- Persistent database storage.
+- Automatic deployment from GitHub.
+- Clear rollback procedure.
+
+Do not depend on a local SQLite database or local filesystem for production data.
+
+Use an always-available backend plan suitable for synchronized real-time sessions.
+
+Document expected hosting costs and OpenAI API costs.
+
+### Deployment Verification
+
+After deploying:
+
+1. Confirm the public website loads.
+2. Confirm backend health checks pass.
+3. Confirm database migrations completed.
+4. Confirm question data exists.
+5. Confirm OpenAI integration works using a controlled test.
+6. Create a room from the live website.
+7. Join from multiple independent browser sessions.
+8. Complete a real seven-question game.
+9. Confirm scoring and leaderboard accuracy.
+10. Verify refresh/reconnection behavior.
+11. Confirm all production services remain healthy.
+
+Do not declare deployment successful merely because a build completes.
+
+---
+
+## 16. Required Project Deliverables
+
+Provide a complete GitHub repository containing:
+
+- Frontend source code.
+- Backend source code.
+- Database models and migrations.
+- WebSocket implementation.
+- Question-generation pipeline.
+- Rarity-scoring pipeline.
+- Admin dashboard.
+- Automated tests.
+- Seed data.
+- Render deployment configuration.
+- Environment-variable template.
+- README.
+- Architecture documentation.
+
+The README must explain:
+
+- How to run locally.
+- How to configure PostgreSQL and Redis.
+- How to provide an OpenAI API key.
+- How to generate questions.
+- How to review and publish questions.
+- How rarity scoring works.
+- How to run tests.
+- How to deploy to Render.
+- How to troubleshoot common failures.
+
+Document all third-party data sources and applicable licensing conditions.
+
+---
+
+## 17. Implementation Order
+
+Execute the project in the following order.
+
+**Phase 1 — Architecture**
+
+- Design the database.
+- Define the game state machine.
+- Define WebSocket events and REST contracts.
+- Establish the monorepo structure.
+- Create local development infrastructure.
+
+**Phase 2 — Core Multiplayer**
+
+- Implement room creation.
+- Implement player joining.
+- Implement persistent sessions.
+- Implement synchronized timers.
+- Implement answer submission.
+- Implement scoring and leaderboard state.
+
+**Phase 3 — Question Intelligence**
+
+- Build data-source importers.
+- Implement question generation.
+- Implement answer-set validation.
+- Implement rarity evaluation.
+- Implement publication workflow.
+- Build and review the initial question bank.
+
+**Phase 4 — Complete User Interface**
+
+- Finish homepage.
+- Finish lobby.
+- Finish mobile player interface.
+- Finish TV display.
+- Finish answer reveals and final results.
+- Finish administrative interface.
+
+**Phase 5 — Reliability and Testing**
+
+- Unit tests.
+- Integration tests.
+- Multiplayer browser tests.
+- Load testing.
+- Security checks.
+- Edge-case testing.
+- Scoring-quality evaluation.
+
+**Phase 6 — Deployment**
+
+- Create Render configuration.
+- Provision production infrastructure.
+- Configure secrets.
+- Deploy.
+- Run migrations.
+- Populate the database.
+- Verify all features on the live website.
+
+**Phase 7 — Final Quality Assurance**
+
+- Play multiple real seven-question games.
+- Test several phones simultaneously.
+- Check all answer-reveal transitions.
+- Validate leaderboard totals.
+- Verify synchronization.
+- Test disconnections.
+- Correct discovered issues.
+- Document remaining limitations.
+
+---
+
+## 18. Definition of Done
+
+The project is complete only when:
+
+- The website is publicly accessible on Render.
+- Multiple real devices can join one room.
+- The TV screen updates in real time.
+- Players can complete seven synchronized questions.
+- Answers remain hidden until the reveal.
+- All answers receive deterministic, evidence-backed scores.
+- The leaderboard updates accurately.
+- The question database contains real, reviewed content.
+- New questions can be generated and reviewed through the admin system.
+- The OpenAI API is securely integrated.
+- Player reconnection works.
+- The system survives normal server restarts and deployment events.
+- Automated tests pass.
+- A full end-to-end multiplayer game succeeds on the deployed website.
+- The repository and documentation are complete.
+
+Do not replace any requirement with an artificial demonstration.
+
+If something cannot be completed due to missing access, credentials, licensing, or technical constraints, report the specific blocker and request the necessary input.
+
+Do not fabricate deployment status, test results, question quality metrics, or feature completion.
+
+**Your objective is to deliver Brillion as a real, polished, reliable multiplayer website that my friends and I can immediately use.**
+
+Begin by reviewing the requirements, defining the architecture and database schema, and creating an executable implementation plan. Then implement, test, and deploy the application through completion.
