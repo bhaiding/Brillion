@@ -3,7 +3,7 @@ services:
     name: brillion-api
     runtime: python
     region: ohio
-    plan: 0.5c-512mb
+    plan: free
     rootDir: backend
     buildCommand: pip install .
     preDeployCommand: alembic upgrade head
@@ -31,6 +31,8 @@ services:
         generateValue: true
       - key: ENVIRONMENT
         value: production
+      - key: INLINE_QUESTION_WORKER
+        value: true
       - key: ALLOWED_ORIGINS
         value: https://brillion.onrender.com
       - key: FRONTEND_URL
@@ -39,36 +41,6 @@ services:
         value: https://brillion-api.onrender.com
       - key: SENTRY_DSN
         sync: false
-
-  - type: worker
-    name: brillion-question-worker
-    runtime: python
-    region: ohio
-    plan: 0.5c-512mb
-    rootDir: backend
-    buildCommand: pip install .
-    startCommand: python -m app.worker
-    maxShutdownDelaySeconds: 60
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: brillion-postgres
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          name: brillion-key-value
-          type: keyvalue
-          property: connectionString
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: OPENAI_MODEL
-        value: gpt-5-mini
-      - key: SESSION_SIGNING_SECRET
-        generateValue: true
-      - key: ADMIN_SECRET
-        generateValue: true
-      - key: ENVIRONMENT
-        value: production
 
   - type: web
     name: brillion
@@ -100,15 +72,15 @@ services:
   - type: keyvalue
     name: brillion-key-value
     region: ohio
-    plan: 256mb
+    plan: free
     ipAllowList: []
     maxmemoryPolicy: noeviction
-    persistenceMode: journal-snapshot
+    persistenceMode: off
 
 databases:
   - name: brillion-postgres
     region: ohio
-    plan: 0.1c-256mb
+    plan: free
     databaseName: brillion
     user: brillion
     postgresMajorVersion: "17"

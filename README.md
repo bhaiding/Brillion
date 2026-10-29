@@ -82,7 +82,7 @@ The backend suite covers normalization, aliases/fuzzy safety, rarity tiers, room
 
 ## Deploying to Render
 
-The root `render.yaml` follows Render's current Blueprint format and creates a static frontend, always-on FastAPI service, background worker, PostgreSQL database, and persistent Key Value instance. It runs Alembic before deploy and seeds reviewed data only on the initial deploy.
+The root `render.yaml` follows Render's current Blueprint format and creates a static frontend, FastAPI service, PostgreSQL database, and Key Value instance on Render's free plans. Because Render does not offer free background workers, the API process also polls queued question-generation jobs. It runs Alembic before deploy and seeds reviewed data only on the initial deploy.
 
 1. Push the repository to GitHub.
 2. In Render, create a Blueprint from that repository.
@@ -90,7 +90,7 @@ The root `render.yaml` follows Render's current Blueprint format and creates a s
 4. If Render changes a service name because the name is already taken, update `FRONTEND_URL`, `BACKEND_URL`, and `ALLOWED_ORIGINS` to the exact public HTTPS origins.
 5. Confirm `/ready`, database migrations, worker logs, and seed count before playing a live game.
 
-Use paid, non-sleeping API/worker/database/Key Value plans for real-time parties. At the October 2026 list prices, this Blueprint is approximately **$30/month before database storage, bandwidth overages, and OpenAI use**: two 0.5 CPU/512 MB services at about $7 each, 256 MB PostgreSQL at $6, 256 MB Key Value at $10, and a free static site. Confirm the dashboard total before provisioning because Render can change pricing. OpenAI generation costs depend on the selected model and recorded token usage; normal gameplay makes no OpenAI calls.
+This Blueprint costs **$0/month within Render's included free usage** and does not require a payment method. The tradeoffs are important: the API sleeps after 15 idle minutes and may need about a minute to wake; the workspace receives 750 free service hours per month; free Key Value data is erased on restart; and the free PostgreSQL database expires after 30 days with no backups. Permanent game records live in PostgreSQL, so Redis restarts only interrupt transient connections, but the database must be recreated, exported, or upgraded before its expiry. OpenAI generation can still incur API charges when a key is configured; normal gameplay makes no OpenAI calls.
 
 ### Rollback
 

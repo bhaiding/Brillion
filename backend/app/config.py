@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     sentry_dsn: str | None = None
     room_ttl_hours: int = 24
+    inline_question_worker: bool = False
 
     @field_validator("allowed_origins", mode="before")
     @classmethod

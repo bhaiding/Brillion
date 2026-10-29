@@ -17,6 +17,7 @@ from app.game import advance_game, current_game, room_by_code, score_and_reveal
 from app.models import GameState, Room, as_utc, utcnow
 from app.rate_limit import RateLimitMiddleware
 from app.realtime import hub
+from app.worker import run as run_question_worker
 
 settings = get_settings()
 logger = logging.getLogger("brillion")
@@ -71,11 +72,16 @@ async def deadline_worker() -> None:
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    worker = asyncio.create_task(deadline_worker())
+    deadline_task = asyncio.create_task(deadline_worker())
+    question_task = asyncio.create_task(run_question_worker()) if settings.inline_question_worker else None
     yield
-    worker.cancel()
+    deadline_task.cancel()
     with suppress(asyncio.CancelledError):
-        await worker
+        await deadline_task
+    if question_task:
+        question_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await question_task
     await hub.close()
     await engine.dispose()
 
