@@ -86,9 +86,10 @@ The root `render.yaml` follows Render's current Blueprint format and creates a s
 
 1. Push the repository to GitHub.
 2. In Render, create a Blueprint from that repository.
-3. Supply `OPENAI_API_KEY` and optionally `SENTRY_DSN` when prompted.
-4. If Render changes a service name because the name is already taken, update `FRONTEND_URL`, `BACKEND_URL`, and `ALLOWED_ORIGINS` to the exact public HTTPS origins.
-5. Confirm `/ready`, database migrations, worker logs, and seed count before playing a live game.
+3. Deploy the Blueprint; no secrets are required for normal gameplay.
+4. To enable optional AI-assisted question drafting, add `OPENAI_API_KEY` to the `brillion-api` service after deployment. Add `SENTRY_DSN` there only if you want Sentry reporting.
+5. If Render changes a service name because the name is already taken, update `FRONTEND_URL`, `BACKEND_URL`, and `ALLOWED_ORIGINS` to the exact public HTTPS origins.
+6. Confirm `/ready`, database migrations, inline worker logs, and seed count before playing a live game.
 
 This Blueprint costs **$0/month within Render's included free usage** and does not require a payment method. The tradeoffs are important: the API sleeps after 15 idle minutes and may need about a minute to wake; the workspace receives 750 free service hours per month; free Key Value data is erased on restart; and the free PostgreSQL database expires after 30 days with no backups. Permanent game records live in PostgreSQL, so Redis restarts only interrupt transient connections, but the database must be recreated, exported, or upgraded before its expiry. OpenAI generation can still incur API charges when a key is configured; normal gameplay makes no OpenAI calls.
 

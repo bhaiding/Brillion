@@ -18,8 +18,6 @@ services:
           name: brillion-key-value
           type: keyvalue
           property: connectionString
-      - key: OPENAI_API_KEY
-        sync: false
       - key: OPENAI_MODEL
         value: gpt-5-mini
       - key: ADMIN_SECRET
@@ -36,8 +34,6 @@ services:
         value: https://brillion.onrender.com
       - key: BACKEND_URL
         value: https://brillion-api.onrender.com
-      - key: SENTRY_DSN
-        sync: false
 
   - type: web
     name: brillion
