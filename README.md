@@ -82,7 +82,7 @@ The backend suite covers normalization, aliases/fuzzy safety, rarity tiers, room
 
 ## Deploying to Render
 
-The root `render.yaml` follows Render's current Blueprint format and creates a static frontend, FastAPI service, PostgreSQL database, and Key Value instance on Render's free plans. Because Render does not offer free background workers, the API process also polls queued question-generation jobs. It runs Alembic before deploy and seeds reviewed data only on the initial deploy.
+The root `render.yaml` follows Render's current Blueprint format and creates a static frontend, FastAPI service, PostgreSQL database, and Key Value instance on Render's free plans. Because Render does not offer free background workers, the API process also polls queued question-generation jobs. Free services do not support pre-deploy commands, so the startup command runs Alembic and the idempotent seed process before starting Uvicorn.
 
 1. Push the repository to GitHub.
 2. In Render, create a Blueprint from that repository.
